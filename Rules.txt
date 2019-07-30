@@ -1,0 +1,28 @@
+Dealer must always hit while under 17
+If anyone goes over 21, they bust
+
+Steps:
+    1.) Shuffle deck
+    2.) Prompt user for number of players
+    3.) Initialize all players
+    4.) Deal 2 cards to all players(including dealer)
+        -When printing out all cards, Hide 1 of the dealer's card( "*hidden card*")
+    5.) Have players place their bets
+    6.) Dealer's turn:
+        - if hand > 21 : end game, house loses, all players win 
+            else : Dealer hits
+    7.) Player's Turn(repeat for every player):
+        -if hand == 21 : end turn, player has 21
+            else : prompt player if he wants to hit or stay,
+                    continue until player stays
+        -if player gets an Ace, value is calculated as high, until the high busts, then low
+    8.) Rotate across all players until all players have stayed
+
+    9.) Determine whether or not players lost - in a tie neither player gets paid, all bets are returned
+        Possible Outcomes:
+            -Dealer Busts :             Player wins
+            -Player Busts :             Dealer wins
+            -Player has higher hand :   Player wins
+            -Dealer has higher hand :   Dealer wins
+            -Both players tie :         Tie
+    10.) Prompt user if he wants to play again
