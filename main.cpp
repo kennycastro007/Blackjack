@@ -1,43 +1,86 @@
+#include <codecvt>
 #include <iostream>
+#include <locale>
 #include <string>
 #include <vector>
+using namespace std::literals;
+
+#ifdef WIN32
+#include <fcntl.h>
+#include <io.h>
+
+static auto& COUT = std::wcout;
+static auto& CIN = std::wcin;
+
+using STRING = std::wstring;
+#define _INIT _setmode(_fileno(stdout), 0x00020000);  // _O_U16TEXT
+STRING operator"" _s(const char* string, std::size_t len) {
+  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t> > converter;
+  std::wstring wide = converter.from_bytes(string);
+  return wide;
+}
+
+void pause() {
+  COUT << "Press enter to continue..."_s;
+  CIN.ignore();
+  COUT << '\n';
+}
+void clear_console() {
+  pause();
+  system("cls");
+}
+#else
+#define _INIT
+static auto& COUT = std::cout;
+static auto& CIN = std::cin;
+using STRING = std::string;
+
+STRING operator"" _s(const char* string, std::size_t len) { return string; }
+
+void pause() {
+  COUT << "Press enter to continue..."_s;
+  CIN.ignore();
+  COUT << '\n';
+}
+void clear_console() {
+  pause();
+  system("clear");
+}
+#endif
 
 namespace constants {
-static const std::string SPADE = "\u2660";
-static const std::string HEARTS = "\u2661";
-static const std::string DIAMONDS = "\u2662";
-static const std::string CLUBS = "\u2663";
-static const std::string suits[] = {SPADE, HEARTS, DIAMONDS, CLUBS};
-static const std::string cards[] = {"A", "2", "3",  "4", "5", "6", "7",
-                                    "8", "9", "10", "J", "Q", "K"};
+static const STRING SPADE = "\u2660"_s;
+static const STRING HEARTS = "\u2665"_s;
+static const STRING DIAMONDS = "\u2666"_s;
+static const STRING CLUBS = "\u2663"_s;
+static const STRING suits[] = {SPADE, HEARTS, DIAMONDS, CLUBS};
+static const STRING cards[] = {"A"_s, "2"_s, "3"_s,  "4"_s, "5"_s, "6"_s, "7"_s,
+                               "8"_s, "9"_s, "10"_s, "J"_s, "Q"_s, "K"_s};
 static const unsigned int N_DECK = 6;
-static const std::string DEALER_NAME = "Dealer";
+static STRING DEALER_NAME = "Dealer"_s;
 }  // namespace constants
 
-//
 // Card Class
-//
 struct Card {
-  std::string suit;
+  STRING suit;
   unsigned int value;
-  std::string printable;
+  STRING printable;
 
   Card() = default;
-  Card(const std::string t_suit, unsigned int t_val,
-       const std::string t_printable)
+  Card(const STRING t_suit, unsigned int t_val, const STRING t_printable)
       : suit(t_suit), value(t_val), printable(t_printable){};
   ~Card() = default;
 
   Card(const Card& rhs)
       : suit(rhs.suit), value(rhs.value), printable(rhs.printable) {
-    std::cout << "Card Copy Constructed \n";
+    COUT << "Card Copy Constructed \n"_s;
   }
   Card& operator=(const Card& rhs) {
     if (this != &rhs) {
       suit = rhs.suit;
       value = rhs.value;
       printable = rhs.printable;
-      std::cout << "Card Copy Assigned \n";
+      COUT << "Card Copy Assigned \n"_s;
       return *this;
     }
   }
@@ -45,29 +88,8 @@ struct Card {
 
   Card& operator=(Card&& rhs) noexcept = default;
   Card(Card&& rhs) noexcept = default;
-  // Card& operator= (Card&& rhs) noexcept {
-  //     if(this != &rhs) {
-  //         suit = rhs.suit);
-  //         value = rhs.value);
-  //         printable = rhs.printable);
-
-  //         rhs.suit.clear();
-  //         rhs.printable.clear();
-  //         rhs.value = 0;
-  //     }
-  //     return *this;
-  // }
-  // Card(Card&& rhs) noexcept :
-  //     suit(rhs.suit)),
-  //     value(rhs.value)),
-  //     printable(rhs.printable)) {
-  //         rhs.suit.clear();
-  //         rhs.printable.clear();
-  //         rhs.value = 0;
-  // }
-
-  friend std::ostream& operator<<(std::ostream& os, const Card& card) {
-    os << card.printable << " [" << card.value << "]";
+  friend decltype(COUT)& operator<<(decltype(COUT)& os, const Card& card) {
+    os << card.printable << " ["_s << card.value << "]"_s;
     return os;
   };
 };
@@ -93,7 +115,7 @@ class Deck {
 
  public:
   Deck() {
-    static_assert(N >= 1, "Deck needs to be initialized with N <= 1");
+    static_assert(N >= 1, "Deck needs to be initialized with N <= 1"_s);
     m_deck.reserve(52 * N);
     for (unsigned int i = 0; i < N; i++) {
       for (auto& suit : constants::suits) {
@@ -122,14 +144,14 @@ class Deck {
   void print() {
     int i = 0;
     for (auto& card : m_deck) {
-      std::cout << card << "\t";
+      COUT << card << "\t";
       i++;
       if (i == 14) {
-        std::cout << '\n';
+        COUT << '\n';
         i = 0;
       }
     }
-    std::cout << '\n';
+    COUT << '\n';
   }
 
   void reshuffle() {
@@ -162,20 +184,20 @@ class Player {
   bool has_ace = false, ace_low = false, ace_high = false;
   int balance;  // US Dollars [$]
   std::vector<Card> m_hand;
-  std::string m_name;
+  STRING m_name;
   int val = 0;
   Deck<constants::N_DECK>& m_deck = g_deck;
   const int id;
 
  public:
-  Player(const std::string& t_name, int t_bal = 5000, int t_id = -1)
+  Player(const STRING& t_name, int t_bal = 5000, int t_id = -1)
       : m_name(t_name), balance(t_bal), id(t_id) {}
 
   void reset_hand() { m_hand.clear(); };
 
   inline bool has_busted() { return m_busted; }
 
-  inline const std::string& get_name() const { return m_name; }
+  inline const STRING& get_name() const { return m_name; }
 
   void get_card() {
     Card card = m_deck.get_card();
@@ -229,42 +251,42 @@ void pause();
 //
 void print_hands(Player& dealer, Player& player, bool show_values = true) {
   clear_console();
-  std::cout << "--------------- Players ---------------\n";
+  COUT << "--------------- Players ---------------\n"_s;
   static bool first = true;
   static bool show_player;
   if (!show_values) {
-    std::cout << dealer.get_name() << "'s hand: \n";
+    COUT << dealer.get_name() << "'s hand: \n"_s;
     for (auto& card : dealer.get_hand()) {
       if (first) {
-        std::cout << "\t* [Unknown]\n";
+        COUT << "\t* [Unknown]\n"_s;
         first = false;
         show_player = true;
         continue;
       } else {
-        std::cout << '\t' << card << " \n";
+        COUT << "\t"_s << card << " \n"_s;
       }
     }
   } else {
-    std::cout << dealer.get_name() << "'s hand: \n";
+    COUT << dealer.get_name() << "'s hand: \n";
     for (auto& card : dealer.get_hand()) {
-      std::cout << '\t' << card << " \n";
+      COUT << "\t"_s << card << " \n"_s;
     }
   }
   if (show_values) {
-    std::cout << "\tValue: " << dealer.get_val() << '\n';
+    COUT << "\tValue: "_s << dealer.get_val() << "\n"_s;
   }
 
-  std::cout << player.get_name() << "'s hand: [Balance: $"
-            << player.get_balance() << "]\n";
+  COUT << player.get_name() << "'s hand: [Balance: $"_s << player.get_balance()
+       << "]\n"_s;
   for (auto& card : player.get_hand()) {
-    std::cout << '\t' << card << " \n";
+    COUT << "\t"_s << card << " \n"_s;
   }
   if (show_values || show_player) {
-    std::cout << "\tValue: " << player.get_val() << '\n';
+    COUT << "\tValue: "_s << player.get_val() << "\n"_s;
   }
 
-  std::cout << "-------------------------------------\n ";
-  std::cout << "\n";
+  COUT << "-------------------------------------\n "_s;
+  COUT << "\n"_s;
 }
 
 //
@@ -272,22 +294,22 @@ void print_hands(Player& dealer, Player& player, bool show_values = true) {
 //
 void print_hand(Player& player) {
   if (player.get_name() == constants::DEALER_NAME) {
-    std::cout << player.get_name() << "'s hand: \n";
+    COUT << player.get_name() << "'s hand: \n"_s;
 
   } else {
-    std::cout << "Your hand: [Balance: " << player.get_balance() << "]\n";
+    COUT << "Your hand: [Balance: "_s << player.get_balance() << "]\n"_s;
   }
   for (auto& card : player.get_hand()) {
-    std::cout << '\t' << card << " \n";
+    COUT << "\t"_s << card << " \n"_s;
   }
-  std::cout << "\tValue: " << player.get_val() << '\n';
-  std::cout << "\n";
+  COUT << "\tValue: "_s << player.get_val() << "\n"_s;
+  COUT << "\n"_s;
 }
 
 //
 // Create a player from a string(name), and int(balance)
 //
-Player create_player(const std::string& name, int balance = 5000) {
+Player create_player(const STRING& name, int balance = 5000) {
   static int id = 0;
   return {name, balance, id};
 };
@@ -295,58 +317,48 @@ Player create_player(const std::string& name, int balance = 5000) {
 void play_round(Player dealer, std::vector<int>& player_ids);
 void play_round(Player& dealer, Player& player);
 
-#include <thread>
+// #include <thread>
 
 //
 // Main Function
 //
 int main(int argc, char const* argv[]) {
-  // Deck<1> deck;
+  _INIT
   Player dealer =
       create_player(constants::DEALER_NAME, std::numeric_limits<int>::max());
 
-  std::cout << "Welcome to the Blackjack table!\nYour dealer today is "
-            << constants::DEALER_NAME << "\nWhat's your name? \n";
-  std::string name = "Kenny";
-  std::cin >> name;
+  COUT << "Welcome to the Blackjack table!\nYour dealer today is "_s
+       << constants::DEALER_NAME << "\nWhat's your name? \n"_s;
+  STRING name = "Kenny"_s;
+  CIN >> name;
 
   Player player = create_player(name);
 
   // Player needs to buy in before dealt cards
-  std::cout << "Buy in ===============================\n";
+  COUT << "Buy in ===============================\n"_s;
   play_round(dealer, player);
 
-  std::string answer;
-  while (answer != "y" || answer != "n" || answer != "yes" || answer != "no") {
-    std::cout << "Would you like to keep playing, yes(s) or no(n)? ";
-    std::cin >> answer;
-    if (answer == "y" || answer == "yes") {
+  STRING answer;
+  while (answer != "y"_s || answer != "n"_s || answer != "yes"_s ||
+         answer != "no"_s) {
+    COUT << "Would you like to keep playing, yes(s) or no(n)? "_s;
+    CIN >> answer;
+    if (answer == "y"_s || answer == "yes"_s) {
       if (player.get_balance() >= 500) {
         dealer.reset_hand();
         player.reset_hand();
         play_round(dealer, player);
       } else
-        std::cout << "You don't have enough to keep playing. Your balance:"
-                  << player.get_balance() << "Come again soon! Goodbye!\n";
-    } else if (answer == "n" || answer == "no") {
-      std::cout << "Come again soon! Goodbye!\n";
+        COUT << "You don't have enough to keep playing. Your balance:"_s
+             << player.get_balance() << "Come again soon! Goodbye!\n"_s;
+    } else if (answer == "n"_s || answer == "no"_s) {
+      COUT << "Come again soon! Goodbye!\n"_s;
       break;
     } else {
-      std::cout << "Player enter a valid input!\n";
+      COUT << "Player enter a valid input!\n"_s;
     }
   }
   return 0;
-}
-
-void clear_console() {
-  pause();
-  system("clear");
-}
-
-void pause() {
-  std::cout << "Press enter to continue...";
-  std::cin.ignore();
-  std::cout << '\n';
 }
 
 void play_round(Player& dealer, Player& player) {
@@ -357,48 +369,48 @@ void play_round(Player& dealer, Player& player) {
   player.get_card();
 
   print_hands(dealer, player, false);
-  std::cout << "====================== Place bet ======================\n";
+  COUT << "====================== Place bet ======================\n"_s;
 
   int bet = 000;
   while (bet < 500) {
-    std::cout << "How much would you like to bet?(At least $500): $";
-    std::cin >> bet;
+    COUT << "How much would you like to bet?(At least $500): $"_s;
+    CIN >> bet;
     if (bet == 0) {
       break;
     } else if (player.get_balance() < bet) {
-      std::cout << "Your balance is too low to bet that amount\nYour balance: $"
-                << player.get_balance() << '\n';
+      COUT << "Your balance is too low to bet that amount\nYour balance: $"_s
+           << player.get_balance() << '\n';
       bet = 0;
     } else if (bet < 500) {
-      std::cout << "You've bet " << bet << ". You need to bet at least $500.\n";
+      COUT << "You've bet " << bet << ". You need to bet at least $500.\n"_s;
     }
   }
   if (bet == 0) {
-    std::cout << "End of round, you folded!\n";
+    COUT << "End of round, you folded!\n"_s;
     return;  // Game is over
   } else {
     player.take(bet);
-    std::cout << "====================== Bets Placed ======================\n";
+    COUT << "====================== Bets Placed ======================\n"_s;
 
     // Dealer's turn
-    // ==========================================================================
+    //
     print_hands(dealer, player);
-    std::cout << "============= " << dealer.get_name()
-              << "'s Turn =============\n";
+    COUT << "============= "_s << dealer.get_name()
+         << "'s Turn =============\n "_s;
     if (dealer.get_val() > 17) {
-      std::cout << dealer.get_name() << " stays\n";
+      COUT << dealer.get_name() << " stays\n"_s;
       // pause();
     }
     while (dealer.get_val() <= 17) {
-      std::cout << '\n' << dealer.get_name() << " hits! \n";
+      COUT << '\n' << dealer.get_name() << " hits! \n"_s;
       dealer.get_card();
-      std::cout << dealer.get_name()
-                << " Received: " << dealer.get_hand().back() << '\n';
+      COUT << dealer.get_name() << " Received: "_s << dealer.get_hand().back()
+           << '\n';
       // print_hand(dealer);
       if (dealer.has_busted()) {
         break;
       } else if (dealer.get_val() > 17) {
-        std::cout << dealer.get_name() << " stays\n";
+        COUT << dealer.get_name() << " stays\n"_s;
         // pause();
         break;
       }
@@ -409,33 +421,33 @@ void play_round(Player& dealer, Player& player) {
     print_hand(dealer);
 
     // Player's turn
-    // ==========================================================================
+    //
     if (!dealer.has_busted()) {
       print_hands(dealer, player);
-      std::string answer;
+      STRING answer;
 
-      std::cout << "============= " << player.get_name()
-                << "'s Turn =============\n";
+      COUT << "============= "_s << player.get_name()
+           << "'s Turn =============\n"_s;
 
-      while (answer != "h" || answer != "s" || answer != "hit" ||
-             answer != "stay") {
+      while (answer != "h"_s || answer != "s"_s || answer != "hit"_s ||
+             answer != "stay"_s) {
         print_hand(player);
-        std::cout << "Would  you like to hit(h) or stay(s)? ";
-        std::cin >> answer;
-        if (answer == "h" || answer == "hit") {
+        COUT << "Would  you like to hit(h) or stay(s)? "_s;
+        CIN >> answer;
+        if (answer == "h"_s || answer == "hit"_s) {
           player.get_card();
-          std::cout << player.get_name()
-                    << " Received: " << player.get_hand().back() << "\n\n";
+          COUT << player.get_name() << " Received: "_s
+               << player.get_hand().back() << "\n\n";
           if (player.has_busted()) {
-            std::cout << "You busted!\n";
+            COUT << "You busted!\n"_s;
             print_hand(player);
             break;
           }
-        } else if (answer == "s" || answer == "stay") {
-          std::cout << "Player's turn is over.\n";
+        } else if (answer == "s"_s || answer == "stay"_s) {
+          COUT << "Player's turn is over.\n"_s;
           break;
         } else {
-          std::cout << "Player enter a valid input!\n";
+          COUT << "Player enter a valid input!\n"_s;
         }
       }
     }
@@ -443,23 +455,24 @@ void play_round(Player& dealer, Player& player) {
     clear_console();
     print_hands(dealer, player);
     if (player.has_busted()) {
-      std::cout << "You busted!\n";
+      COUT << "You busted!\n"_s;
     } else if (dealer.has_busted()) {
-      std::cout << dealer.get_name() << " busted!\nYou win!\n";
-      std::cout << "You've won $" << bet * 2 << '\n';
+      COUT << dealer.get_name() << " busted!\nYou win!\n"_s;
+      COUT << "You've won $"_s << bet * 2 << '\n';
       player.give(bet * 2);
     } else if (dealer.get_val() > player.get_val()) {
-      std::cout << dealer.get_name() << " had the higher hand\nYou lose.\n";
+      COUT << dealer.get_name() << " had the higher hand\nYou lose.\n"_s;
     } else if (dealer.get_val() < player.get_val()) {
-      std::cout << "Congrats! You had the higher hand\nYou win!\n";
+      COUT << "Congrats! You had the higher hand\nYou win!\n"_s;
       player.give(bet * 2);
-      std::cout << "You've won $" << bet * 2 << '\n';
+      COUT << "You've won $"_s << bet * 2 << "\n"_s;
     } else {
-      std::cout << "It's a tie!\n";
+      COUT << "It's a tie!\n"_s;
     }
   }
 }
 
 /*
-  Fix Aces, they should have a variable value, either 11 or 1 when player busts
+  Fix Aces, they should have a variable value, either 11 or 1 when player
+  busts
  */
